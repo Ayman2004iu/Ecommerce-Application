@@ -6,9 +6,9 @@
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ##  Overview
-A full-featured **E-Commerce Application** built with **Java, Spring Boot, and MySQL**.  
-The system provides secure REST APIs for product management, shopping cart, order processing, and user authentication.  
-Designed to be scalable, maintainable, and secure, following best practices of backend development.
+The **E-Commerce Application** is a full-stack backend system built with **Java, Spring Boot, and MySQL**, providing RESTful APIs for product management, shopping carts, orders, and secure user authentication.  
+It follows clean architecture principles and industry best practices for scalability and maintainability.
+
 
 ---
 
@@ -28,7 +28,7 @@ Designed to be scalable, maintainable, and secure, following best practices of b
 - **Database**: MySQL
 - **Build Tool**: Maven
 - **API Testing**: Postman
-- **Containerization**: Docker (optional)
+- **Containerization**: Docker 
 
 ---
 ## Future Improvements
@@ -49,3 +49,4 @@ Designed to be scalable, maintainable, and secure, following best practices of b
 - [GitHub](https://github.com/Ayman2004iu)
 
 - [LinkedIn]( https://www.linkedin.com/in/ayman-ibrahim-8b48aa28a/)
+
