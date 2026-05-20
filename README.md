@@ -42,7 +42,7 @@ It follows clean architecture principles and industry best practices for scalabi
 ---
 ##  Author
 
-- Ayman Ibrahim Siddek
+- Ayman Ibrahim Seddik
 
 - ayman.ibrahim.seddik@gmail.com
 
