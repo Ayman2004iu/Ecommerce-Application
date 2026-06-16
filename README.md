@@ -272,7 +272,7 @@ The **E-Commerce Application** is a production-ready RESTful API backend system 
 #### 1. Clone the Repository
 ```bash
 git clone https://github.com/Ayman2004iu/Ecommerce-Application.git
-cd EcommerceApp
+cd Ecommerce-Application
 ```
 
 #### 2. Configure Environment Variables
