@@ -1,9 +1,9 @@
 package com.example.ecommerce.service.impl;
 
-import com.example.ecommerce.dto.CartItemResponse;
 import com.example.ecommerce.dto.CartRequest;
 import com.example.ecommerce.dto.CartResponse;
 import com.example.ecommerce.exception.ResourceNotFoundException;
+import com.example.ecommerce.mapper.CartMapper;
 import com.example.ecommerce.model.*;
 import com.example.ecommerce.repository.CartRepository;
 import com.example.ecommerce.repository.ProductRepository;
@@ -12,30 +12,32 @@ import com.example.ecommerce.service.CartService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+
 @Service
 public class CartServiceImpl implements CartService {
 
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final CartMapper cartMapper;
 
-    public CartServiceImpl(CartRepository cartRepository, UserRepository userRepository, ProductRepository productRepository) {
+    public CartServiceImpl(CartRepository cartRepository, UserRepository userRepository, ProductRepository productRepository, CartMapper cartMapper) {
         this.cartRepository = cartRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
+        this.cartMapper = cartMapper;
     }
-
 
     @Override
     @Transactional
-    public CartResponse  addProductToCart(Long userId, CartRequest request) {
+    public CartResponse addProductToCart(Long userId, CartRequest request) {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseGet(() -> {
                     User user = userRepository.findById(userId)
                             .orElseThrow(() -> new ResourceNotFoundException("User not found"));
                     return cartRepository.save(Cart.builder().user(user).build());
                 });
-
 
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
@@ -52,27 +54,36 @@ public class CartServiceImpl implements CartService {
 
         item.setQuantity(item.getQuantity() + request.getQuantity());
         cart.getItems().add(item);
-        return mapToResponse(cart);
+        cartRepository.save(cart);
+        CartResponse response = cartMapper.toResponse(cart);
+        response.setTotalPrice(calculateTotalPrice(cart));
+        return response;
     }
 
     @Override
-    public CartResponse  getUserCart(Long userId) {
+    @Transactional(readOnly = true)
+    public CartResponse getUserCart(Long userId) {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart not found for user"));
-
-        return mapToResponse(cart);
-
+        CartResponse response = cartMapper.toResponse(cart);
+        response.setTotalPrice(calculateTotalPrice(cart));
+        return response;
     }
 
     @Override
+    @Transactional
     public CartResponse removeProductFromCart(Long userId, Long productId) {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
         cart.getItems().removeIf(i -> i.getProduct().getId().equals(productId));
-        return mapToResponse(cart);
+        cartRepository.save(cart);
+        CartResponse response = cartMapper.toResponse(cart);
+        response.setTotalPrice(calculateTotalPrice(cart));
+        return response;
     }
 
     @Override
+    @Transactional
     public void clearCart(Long userId) {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cart not found"));
@@ -80,19 +91,10 @@ public class CartServiceImpl implements CartService {
         cartRepository.save(cart);
     }
 
-    private CartResponse mapToResponse(Cart cart) {
-        return CartResponse.builder()
-                .id(cart.getId())
-                .userId(cart.getUser().getId())
-                .items(cart.getItems().stream()
-                        .map(item -> CartItemResponse.builder()
-                            .productId(item.getProduct().getId())
-                            .productName(item.getProduct().getName())
-                            .quantity(item.getQuantity())
-                            .price(item.getProduct().getPrice())
-                            .build())
-                        .toList())
-                .build();
+    private BigDecimal calculateTotalPrice(Cart cart) {
+        return cart.getItems().stream()
+                .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
 

@@ -1,16 +1,15 @@
-
-FROM openjdk:17-jdk-alpine
-
+FROM eclipse-temurin:21-jdk-alpine AS builder
 WORKDIR /app
+COPY .mvn/ .mvn
+COPY mvnw pom.xml ./
+RUN sed -i 's/\r$//' mvnw
+RUN chmod +x mvnw
+RUN ./mvnw dependency:go-offline -B
+COPY src ./src
+RUN ./mvnw package -DskipTests -B
 
-COPY target/EcommerceApp-0.0.1-SNAPSHOT.jar app.jar
-
-COPY wait-for-it.sh /wait-for-it.sh
-RUN chmod +x /wait-for-it.sh && apk add --no-cache mysql-client
-
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=builder /app/target/EcommerceApp-0.0.1-SNAPSHOT.jar app.jar
 EXPOSE 8080
-
-ENTRYPOINT ["/wait-for-it.sh", "db","3306", "--timeout=60", "--", "java", "-jar", "app.jar"]
-
-
-
+ENTRYPOINT ["java", "-jar", "app.jar"]

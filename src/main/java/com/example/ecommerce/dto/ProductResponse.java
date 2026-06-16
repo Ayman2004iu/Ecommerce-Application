@@ -2,6 +2,7 @@ package com.example.ecommerce.dto;
 
 import lombok.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -14,5 +15,8 @@ public class ProductResponse {
     private int quantity;
     private String categoryName;
     private String description;
+    private String imageUrl;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
 

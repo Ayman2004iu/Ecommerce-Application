@@ -5,6 +5,8 @@ package com.example.ecommerce.service.impl;
 import com.example.ecommerce.dto.AuthResponses;
 import com.example.ecommerce.dto.LoginRequest;
 import com.example.ecommerce.dto.RegisterRequest;
+import com.example.ecommerce.exception.DuplicateResourceException;
+import com.example.ecommerce.exception.ResourceNotFoundException;
 import com.example.ecommerce.model.Role;
 import com.example.ecommerce.model.User;
 import com.example.ecommerce.repository.UserRepository;
@@ -43,10 +45,10 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public AuthResponses register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Username already taken");
+            throw new DuplicateResourceException("Username already taken");
         }
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already in use");
+            throw new DuplicateResourceException("Email already in use");
         }
 
         User user = User.builder()
@@ -69,7 +71,7 @@ public class AuthServiceImpl implements AuthService {
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         return buildAuthResponse(user);
     }
@@ -78,4 +80,5 @@ public class AuthServiceImpl implements AuthService {
         String token = jwtUtil.generateToken(user.getEmail());
         return new AuthResponses(token, user.getUsername(), user.getEmail());
     }
+
 }

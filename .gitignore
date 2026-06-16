@@ -45,6 +45,13 @@ Thumbs.db
 !example.env
 application.yml
 
+### Local Spring Config ###
+src/main/resources/application-local.yml
+
 ### Backup / Temp ###
 *.bak
 *.tmp
+
+### Repomix files ###
+repomix-output.xml
+.repomixignore

@@ -3,14 +3,16 @@ package com.example.ecommerce.service.impl;
 import com.example.ecommerce.dto.ProductRequest;
 import com.example.ecommerce.dto.ProductResponse;
 import com.example.ecommerce.exception.ResourceNotFoundException;
+import com.example.ecommerce.mapper.ProductMapper;
 import com.example.ecommerce.repository.CategoryRepository;
 import com.example.ecommerce.model.Category;
 import com.example.ecommerce.model.Product;
 import com.example.ecommerce.repository.ProductRepository;
 import com.example.ecommerce.service.ProductService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
 
 
 @Service
@@ -18,11 +20,14 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final ProductMapper productMapper;
 
     public ProductServiceImpl(ProductRepository productRepository,
-                              CategoryRepository categoryRepository) {
+                              CategoryRepository categoryRepository,
+                              ProductMapper productMapper) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
+        this.productMapper = productMapper;
     }
 
     @Override
@@ -31,39 +36,41 @@ public class ProductServiceImpl implements ProductService {
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found"));
 
-        Product product = Product.builder()
-                .name(request.getName())
-                .description(request.getDescription())
-                .price(request.getPrice())
-                .quantity(request.getQuantity())
-                .category(category)
-                .build();
+        Product product = productMapper.toEntity(request);
+        product.setCategory(category);
 
-        Product saved= productRepository.save(product);
-        return mapToResponse(saved);
+        Product saved = productRepository.save(product);
+        return productMapper.toResponse(saved);
     }
 
     @Override
-    public List<ProductResponse> getProducts(String name, Long categoryId) {
-        List<Product> products;
-
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> getProducts(String name, Long categoryId, Pageable pageable) {
         if (name != null && categoryId != null) {
-            products= productRepository.findByNameContainingAndCategoryId(name, categoryId);
+            return productRepository.findByNameContainingAndCategoryId(name, categoryId, pageable)
+                    .map(productMapper::toResponse);
         } else if (name != null) {
-            products= productRepository.findByNameContaining(name);
+            return productRepository.findByNameContaining(name, pageable)
+                    .map(productMapper::toResponse);
         } else if (categoryId != null) {
-            products= productRepository.findByCategoryId(categoryId);
-        }else {
-            products = productRepository.findAll();
+            return productRepository.findByCategoryId(categoryId, pageable)
+                    .map(productMapper::toResponse);
+        } else {
+            return productRepository.findAll(pageable)
+                    .map(productMapper::toResponse);
         }
-
-        return products.stream()
-                .map(this::mapToResponse)
-                .toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public ProductResponse getProductById(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+        return productMapper.toResponse(product);
+    }
 
     @Override
+    @Transactional
     public ProductResponse updateProduct(Long id, ProductRequest request) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
@@ -78,28 +85,16 @@ public class ProductServiceImpl implements ProductService {
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
         product.setQuantity(request.getQuantity());
+        product.setImageUrl(request.getImageUrl());
         Product updated = productRepository.save(product);
-        return mapToResponse(updated);
+        return productMapper.toResponse(updated);
     }
 
     @Override
     public void deleteProduct(Long id) {
-
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
         productRepository.delete(product);
-
-    }
-
-    private ProductResponse mapToResponse(Product product) {
-        return ProductResponse.builder()
-                .id(product.getId())
-                .name(product.getName())
-                .price(product.getPrice())
-                .quantity(product.getQuantity())
-                .description(product.getDescription())
-                .categoryName(product.getCategory().getName())
-                .build();
     }
 }
 

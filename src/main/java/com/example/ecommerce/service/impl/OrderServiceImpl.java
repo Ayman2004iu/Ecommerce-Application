@@ -1,13 +1,15 @@
 package com.example.ecommerce.service.impl;
 
-import com.example.ecommerce.dto.OrderItemResponse;
 import com.example.ecommerce.dto.OrderRequest;
 import com.example.ecommerce.dto.OrderResponse;
 import com.example.ecommerce.exception.BusinessException;
 import com.example.ecommerce.exception.ResourceNotFoundException;
+import com.example.ecommerce.mapper.OrderMapper;
 import com.example.ecommerce.model.*;
 import com.example.ecommerce.repository.*;
 import com.example.ecommerce.service.OrderService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -22,15 +24,18 @@ public class OrderServiceImpl implements OrderService {
     private final UserRepository userRepository;
     private final CartRepository cartRepository;
     private final ProductRepository productRepository;
+    private final OrderMapper orderMapper;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                             UserRepository userRepository,
                             CartRepository cartRepository,
-                            ProductRepository productRepository) {
+                            ProductRepository productRepository,
+                            OrderMapper orderMapper) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.cartRepository = cartRepository;
         this.productRepository = productRepository;
+        this.orderMapper = orderMapper;
     }
 
     @Transactional
@@ -51,7 +56,6 @@ public class OrderServiceImpl implements OrderService {
         order.setShippingAddress(request.getShippingAddress());
         order.setPaymentMethod(request.getPaymentMethod());
         order.setStatus(OrderStatus.PENDING);
-        order.setCreatedAt(LocalDateTime.now());
 
         BigDecimal total = BigDecimal.ZERO;
         List<OrderItem> orderItems = new ArrayList<>();
@@ -87,39 +91,21 @@ public class OrderServiceImpl implements OrderService {
 
         Order savedOrder = orderRepository.save(order);
 
-        return mapToDto(savedOrder);
+        return orderMapper.toResponse(savedOrder);
     }
 
     @Override
-    public List<OrderResponse> getUserOrders(Long userId) {
+    public Page<OrderResponse> getUserOrders(Long userId, Pageable pageable) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        List<Order> orders = orderRepository.findByUser(user);
-        return orders.stream()
-                .map(this::mapToDto)
-                .toList();
+        return orderRepository.findByUser(user, pageable)
+                .map(orderMapper::toResponse);
     }
 
-    private OrderResponse mapToDto(Order order) {
-        OrderResponse dto = new OrderResponse();
-        dto.setId(order.getId());
-        dto.setUsername(order.getUser().getUsername());
-        dto.setShippingAddress(order.getShippingAddress());
-        dto.setPaymentMethod(order.getPaymentMethod());
-        dto.setStatus(order.getStatus().name());
-        dto.setCreatedAt(order.getCreatedAt());
-        dto.setTotalPrice(order.getTotalPrice());
-
-        List<OrderItemResponse> itemDtos = order.getItems().stream().map(item -> {
-            OrderItemResponse itemDto = new OrderItemResponse();
-            itemDto.setProductName(item.getProduct().getName());
-            itemDto.setQuantity(item.getQuantity());
-            itemDto.setPrice(item.getPrice());
-            return itemDto;
-        }).toList();
-
-        dto.setItems(itemDtos);
-        return dto;
+    @Override
+    public Page<OrderResponse> getAllOrders(Pageable pageable) {
+        return orderRepository.findAll(pageable)
+                .map(orderMapper::toResponse);
     }
 }
 

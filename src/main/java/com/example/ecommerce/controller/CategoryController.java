@@ -42,7 +42,7 @@ public class CategoryController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CategoryResponse> updateCategory(
             @PathVariable Long id,
-            @RequestBody CategoryRequest request
+            @Valid @RequestBody CategoryRequest request
     ) {
         return ResponseEntity.ok(categoryService.updateCategory(id, request));
     }
